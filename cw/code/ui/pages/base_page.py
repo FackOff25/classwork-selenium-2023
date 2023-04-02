@@ -46,3 +46,6 @@ class BasePage(object):
         self.find(locator, timeout=timeout)
         elem = self.wait(timeout).until(EC.element_to_be_clickable(locator))
         elem.click()
+
+    def refresh(self):
+        self.driver.refresh()

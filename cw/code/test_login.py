@@ -1,4 +1,4 @@
-import time
+import time, os
 
 import pytest
 from _pytest.fixtures import FixtureRequest
@@ -26,10 +26,14 @@ class BaseCase:
             self.driver.refresh()
             self.main_page = MainPage(driver)
 
+class WrongValue(Exception):
+    pass
 
 @pytest.fixture(scope='session')
 def credentials():
-    with open('/home/fackoff/code/6_sem_tech/classwork-selenium-2023/cw/code/creds', 'r') as f:
+    script_dir = os.path.dirname(__file__)
+    rel_path = "/creds"
+    with open(script_dir + rel_path, 'r') as f:
         user = f.readline().strip()
         password = f.readline().strip()
 
@@ -47,8 +51,10 @@ def cookies(credentials, config):
     driver.quit()
     return cookies
 
+
 class MainPage(BasePage):
     url = 'https://target-sandbox.my.com/'
+
 
 class LoginPage(BasePage):
     url = 'https://target-sandbox.my.com/'
@@ -62,8 +68,19 @@ class LoginPage(BasePage):
 
         return MainPage(self.driver)
 
+
 class DashboardPage(BasePage):
     url = 'https://target-sandbox.my.com/dashboard'
+
+
+class ContactsPage(BasePage):
+    url = 'https://target-sandbox.my.com/profile/contacts'
+    
+    def __init__(self, driver):
+        self.driver = driver
+        self.driver.get(self.url)
+        self.is_opened()
+
 
 
 class TestLogin(BaseCase):
@@ -91,5 +108,28 @@ class TestHeader(BaseCase):
         if not page.driver.current_url.startswith(url):
             raise PageNotOpenedExeption(f'{url} did not open in {timeout} sec, current url {self.driver.current_url}')
 
+
+class TestContacts(BaseCase):
+    authorize = True
+
+    def test_contacts_change(self):
+        timeout = 15
+        page = ContactsPage(self.driver)
+        new_fullname = "fullname"
+
+        fullname_field =  page.find((By.XPATH, '/html/body/div[1]/div[2]/div[1]/div/div[2]/div[2]/div[2]/div/div[1]/div[2]/div/ul/li[2]/div[1]/div/div/input'), timeout)
+        fullname = fullname_field.get_attribute("value")
+
+        if fullname == new_fullname:
+            new_fullname = "newFullname"
+
+        fullname_field.clear()
+        fullname_field.send_keys(new_fullname)
+        page.click((By.XPATH, '/html/body/div[1]/div[2]/div[1]/div/div[2]/div[2]/div[2]/div/div[1]/div[2]/div/div[4]/button/div'), timeout)
+
+        page.refresh()
+        fullname = page.find((By.XPATH, '/html/body/div[1]/div[2]/div[1]/div/div[2]/div[2]/div[2]/div/div[1]/div[2]/div/ul/li[2]/div[1]/div/div/input'), timeout).get_attribute("value")
+        if fullname != new_fullname:
+            raise WrongValue(f'fullname must be {new_fullname} but it is {fullname}')
 
 
