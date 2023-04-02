@@ -5,7 +5,7 @@ from _pytest.fixtures import FixtureRequest
 from selenium.webdriver.common.by import By
 
 from ui.fixtures import get_driver
-from ui.pages.base_page import BasePage
+from ui.pages.base_page import BasePage, PageNotOpenedExeption
 
 
 class BaseCase:
@@ -47,6 +47,8 @@ def cookies(credentials, config):
     driver.quit()
     return cookies
 
+class MainPage(BasePage):
+    url = 'https://target-sandbox.my.com/'
 
 class LoginPage(BasePage):
     url = 'https://target-sandbox.my.com/'
@@ -58,28 +60,36 @@ class LoginPage(BasePage):
 
         self.click((By.XPATH, '/html/body/div[2]/div/div[2]/div/div[4]/div[1]'))
 
-        time.sleep(5)
         return MainPage(self.driver)
 
-
-class MainPage(BasePage):
-    url = 'https://target-sandbox.my.com/'
+class DashboardPage(BasePage):
+    url = 'https://target-sandbox.my.com/dashboard'
 
 
 class TestLogin(BaseCase):
     authorize = False
-
+    
     def test_login(self, credentials):
         login_page = LoginPage(self.driver)
         login_page.login(*credentials)
+        
 
-        time.sleep(5)
+class TestHeader(BaseCase):
+    authorize = True
+
+    def test_header(self):
+        timeout = 15
+        page = DashboardPage(self.driver)
+
+        url = 'https://target-sandbox.my.com/billing'
+        page.click((By.XPATH, '/html/body/div[1]/div[1]/div/div/div/div[2]/ul/li[3]/a'), timeout)
+        if not page.driver.current_url.startswith(url):
+            raise PageNotOpenedExeption(f'{url} did not open in {timeout} sec, current url {self.driver.current_url}')
+
+        url = 'https://target-sandbox.my.com/profile'
+        page.click((By.XPATH, '/html/body/div[1]/div[1]/div/div/div/div[2]/ul/li[6]/a'), timeout)
+        if not page.driver.current_url.startswith(url):
+            raise PageNotOpenedExeption(f'{url} did not open in {timeout} sec, current url {self.driver.current_url}')
 
 
-class TestLK(BaseCase):
-    @pytest.mark.skip("SKIP")
-    def test_lk1(self):
-        time.sleep(3)
-    @pytest.mark.skip("SKIP")
-    def test_lk2(self):
-        time.sleep(3)
+
